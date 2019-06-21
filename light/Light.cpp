@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The LineageOS Project
+ * Copyright (C) 2017 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,21 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "LightService"
-
+#define LOG_TAG "LightService-lettuce"
 #include <log/log.h>
-
 #include "Light.h"
-
 #include <fstream>
 
-#define LCD_LED_BRIGHTNESS    "/sys/class/leds/lcd-backlight/brightness"
+namespace android {
+namespace hardware {
+namespace light {
+namespace V2_0 {
+namespace implementation {
 
-#define MAX_LCD_BRIGHTNESS    4095
+#define LEDS            "/sys/class/leds/"
+#define LCD_LED         LEDS "lcd-backlight/"
+#define BRIGHTNESS      "brightness"
 
-namespace {
 /*
  * Write value to path and close file.
  */
@@ -34,7 +36,7 @@ static void set(std::string path, std::string value) {
     std::ofstream file(path);
 
     if (!file.is_open()) {
-        ALOGW("failed to write %s to %s", value.c_str(), path.c_str());
+        ALOGE("failed to write %s to %s", value.c_str(), path.c_str());
         return;
     }
 
@@ -45,54 +47,16 @@ static void set(std::string path, int value) {
     set(path, std::to_string(value));
 }
 
-static uint32_t getBrightness(const LightState& state) {
-    uint32_t alpha, red, green, blue;
-
-    /*
-     * Extract brightness from AARRGGBB.
-     */
-    alpha = (state.color >> 24) & 0xFF;
-    red = (state.color >> 16) & 0xFF;
-    green = (state.color >> 8) & 0xFF;
-    blue = state.color & 0xFF;
-
-    /*
-     * Scale RGB brightness if Alpha brightness is not 0xFF.
-     */
-    if (alpha != 0xFF) {
-        red = red * alpha / 0xFF;
-        green = green * alpha / 0xFF;
-        blue = blue * alpha / 0xFF;
-    }
-
-    return (77 * red + 150 * green + 29 * blue) >> 8;
+static void handleBacklight(const LightState& state) {
+    uint32_t brightness = state.color & 0xFF;
+    set(LCD_LED BRIGHTNESS, brightness);
 }
 
-static inline uint32_t scaleBrightness(uint32_t brightness, uint32_t maxBrightness) {
-    return brightness * maxBrightness / 0xFF;
-}
-
-static inline uint32_t getScaledBrightness(const LightState& state, uint32_t maxBrightness) {
-    return scaleBrightness(getBrightness(state), maxBrightness);
-}
-
-static void handleBacklight(Type /* type */, const LightState& state) {
-    uint32_t brightness = getScaledBrightness(state, MAX_LCD_BRIGHTNESS);
-    set(LCD_LED_BRIGHTNESS, brightness);
-}
-
-
-static std::map<Type, std::function<void(Type type, const LightState&)>> lights = {
-    { Type::BACKLIGHT, handleBacklight },
+static std::map<Type, std::function<void(const LightState&)>> lights = {
+    {Type::BACKLIGHT, handleBacklight},
 };
 
-} // anonymous namespace
-
-namespace android {
-namespace hardware {
-namespace light {
-namespace V2_0 {
-namespace implementation {
+Light::Light() {}
 
 Return<Status> Light::setLight(Type type, const LightState& state) {
     auto it = lights.find(type);
@@ -103,20 +67,17 @@ Return<Status> Light::setLight(Type type, const LightState& state) {
 
     /*
      * Lock global mutex until light state is updated.
-     */
+    */
+
     std::lock_guard<std::mutex> lock(globalLock);
-
-    it->second(type, state);
-
+    it->second(state);
     return Status::SUCCESS;
 }
 
 Return<void> Light::getSupportedTypes(getSupportedTypes_cb _hidl_cb) {
     std::vector<Type> types;
 
-    for (auto const& light : lights) {
-        types.push_back(light.first);
-    }
+    for (auto const& light : lights) types.push_back(light.first);
 
     _hidl_cb(types);
 
@@ -128,3 +89,4 @@ Return<void> Light::getSupportedTypes(getSupportedTypes_cb _hidl_cb) {
 }  // namespace light
 }  // namespace hardware
 }  // namespace android
+

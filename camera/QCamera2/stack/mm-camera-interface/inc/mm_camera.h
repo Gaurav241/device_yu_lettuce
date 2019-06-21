@@ -46,7 +46,7 @@
 
 #define MM_CAMERA_DEV_NAME_LEN 32
 #define MM_CAMERA_DEV_OPEN_TRIES 20
-#define MM_CAMERA_DEV_OPEN_RETRY_SLEEP 20
+#define MM_CAMERA_DEV_OPEN_RETRY_SLEEP 40
 #define THREAD_NAME_SIZE 15
 
 #define MM_CAMERA_POST_FLASH_PREVIEW_SKIP_CNT 3
@@ -664,3 +664,4 @@ extern int32_t mm_camera_channel_advanced_capture(mm_camera_obj_t *my_obj,
                                                uint32_t ch_id,
                                                uint32_t start_flag);
 #endif /* __MM_CAMERA_H__ */
+

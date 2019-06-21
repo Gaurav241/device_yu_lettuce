@@ -13,17 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-$(call inherit-product, device/yu/lettuce/full_lettuce.mk)
+# Inherit from those products. Most specific first.
+$(call inherit-product, $(SRC_TARGET_DIR)/product/core_64_bit.mk)
+$(call inherit-product, $(SRC_TARGET_DIR)/product/full_base_telephony.mk)
+
+# Inherit from lettuce device
+$(call inherit-product, device/yu/lettuce/device.mk)
 
 # Inherit some common LineageOS stuff.
 $(call inherit-product, vendor/lineage/config/common_full_phone.mk)
 
-# Must define platform variant before including any common things
-TARGET_BOARD_PLATFORM_VARIANT := msm8916
-
-PRODUCT_NAME := lineage_lettuce
-BOARD_VENDOR := yu
+# Device identifier. This must come after all inclusions
 PRODUCT_DEVICE := lettuce
+PRODUCT_NAME := lineage_lettuce
+PRODUCT_BRAND := YU
+PRODUCT_MODEL := YU5010
+PRODUCT_MANUFACTURER := YU
+
+# Vendor security patch level
+PRODUCT_PROPERTY_OVERRIDES += \
+    ro.lineage.build.vendor_security_patch=2016-05-01
 
 PRODUCT_GMS_CLIENTID_BASE := android-micromax
 
@@ -33,3 +42,4 @@ PRODUCT_BUILD_PROP_OVERRIDES += \
     TARGET_DEVICE=YUPHORIA
 
 BUILD_FINGERPRINT := YU/YUPHORIA/YUPHORIA:5.1.1/LMY49J/YOG4PAS8A8:user/release-keys
+
